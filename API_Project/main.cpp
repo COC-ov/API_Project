@@ -1,6 +1,8 @@
 #include <windows.h>
 #include <TCHAR.H>
+#include <stdio.h>
 #include "resource.h"
+#pragma comment(linker, "/entry:WinMainCRTStartup /subsystem:console")	//콘솔창 띄움
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 HINSTANCE hInst;
@@ -44,18 +46,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	HDC hDC, memDC;
 	PAINTSTRUCT ps;
 	static HBITMAP hBitmap;
+	static int bx, by;	//비트맵의 정보 저장
+	BITMAP bit;
 
 	switch (uMsg)
 	{
 	case WM_CREATE:
 		hBitmap = (HBITMAP)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP1));	//처음엔 안되었다가 껐다가키니까됨, 비트맵 이미지를 로드
+		//비트맵의 정보를 알아낸다.
+		GetObject(hBitmap, sizeof(BITMAP), &bit);
+		bx = bit.bmWidth;	
+		by = bit.bmHeight;
 		break;																//hInst는 응용프로그램의 인스턴스 값
 
 	case WM_PAINT:
 		hDC = BeginPaint(hWnd, &ps);
 		memDC = CreateCompatibleDC(hDC);	//메모리디시인memedc생성
 		SelectObject(memDC, hBitmap);		//memdc에 hBitmap을 서정
-		StretchBlt(hDC, 0, 0, 463 * 2, 492, memDC, 0, 0, 463, 492, SRCCOPY); //그림을 가로로 2배 늘려서 출력
+		StretchBlt(hDC, 0, 0, bx * 2, by, memDC, 0, 0, bx, by, SRCCOPY); //그림을 가로로 2배 늘려서 출력
 		DeleteDC(memDC);					//memDC삭제
 		EndPaint(hWnd, &ps);
 		break;
