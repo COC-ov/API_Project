@@ -55,8 +55,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		hDC = BeginPaint(hWnd, &ps);
 		memDC = CreateCompatibleDC(hDC);	//메모리디시인memedc생성
 		SelectObject(memDC, hBitmap);		//memdc에 hBitmap을 서정
-		BitBlt(hDC, 0, 0, 463, 492, memDC, 0, 0, SRCCOPY);	//그림을 0,0부터 너비463픽셀, 높이492픽셀 만큼 복사해 좌표 0,0부터 그리라는 의미
-		DeleteDC(memDC);									//memDC삭제
+		StretchBlt(hDC, 0, 0, 463 * 2, 492, memDC, 0, 0, 463, 492, SRCCOPY); //그림을 가로로 2배 늘려서 출력
+		DeleteDC(memDC);					//memDC삭제
 		EndPaint(hWnd, &ps);
 		break;
 
