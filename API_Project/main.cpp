@@ -14,7 +14,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	MSG msg;
 	WNDCLASS wndClass;
 	TCHAR className[11] = L"Class Name";
-	TCHAR titleName[10] = L"다자이 귀여워";
+	TCHAR titleName[10] = L"윈플실습";
 	hInst = hInstance;
 
 	wndClass.style = CS_HREDRAW | CS_VREDRAW;
@@ -47,23 +47,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	static HBITMAP hBitmap, hOldBitmap;
 	static int bx, by;	//비트맵의 정보 저장
+	static RECT rt;	//윈도우의 작업영역의 크기 저장
 	BITMAP bit;
+	static int r;
+	static char c;
 
 	switch (uMsg)
 	{
 	case WM_CREATE:
-		hBitmap = (HBITMAP)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP1));	//처음엔 안되었다가 껐다가키니까됨, 비트맵 이미지를 로드
+		hBitmap = (HBITMAP)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP2));	//처음엔 안되었다가 껐다가키니까됨, 비트맵 이미지를 로드
 		//비트맵의 정보를 알아낸다.
 		GetObject(hBitmap, sizeof(BITMAP), &bit);
 		bx = bit.bmWidth;	
 		by = bit.bmHeight;
 		break;																//hInst는 응용프로그램의 인스턴스 값
 
+	case WM_CHAR:
+		switch (wParam)
+		{
+		case 'r':
+		case'R':
+			r++;
+			break;
+		case 'a':
+		case 'A':
+			c = 'a';
+			GetClientRect(hWnd, &rt);	//작업영역의 크기 알아내기
+			break;
+		}
+
+		InvalidateRect(hWnd, NULL, FALSE);
+		break;
+
 	case WM_PAINT:
 		hDC = BeginPaint(hWnd, &ps);
 		memDC = CreateCompatibleDC(hDC);	//메모리디시인memedc생성
 		hOldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);		//memdc에 hBitmap을 서정
-		StretchBlt(hDC, 0, 0, bx * 2, by, memDC, 0, 0, bx, by, SRCCOPY); //그림을 가로로 2배 늘려서 출력
+		if(r%2==1)
+			BitBlt(hDC, 0, 0, bx, by, memDC, 0, 0, NOTSRCCOPY);
+		else if(c=='a')
+			StretchBlt(hDC, rt.left, rt.top, rt.right, rt.bottom, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
+		else
+			BitBlt(hDC, 0, 0, bx, by, memDC, 0, 0, SRCCOPY);
+
+		StretchBlt(hDC, rt.left, rt.top, rt.right/2, rt.bottom/2, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
+		StretchBlt(hDC, rt.right / 2, rt.bottom / 2, rt.right / 2, rt.bottom / 2, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
+		StretchBlt(hDC, rt.right / 2, rt.top, rt.right / 2, rt.bottom / 2, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
+		StretchBlt(hDC, rt.left, rt.bottom / 2, rt.right/2, rt.bottom/2, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
+		//printf("%d %d %d %d/%d %d %d %d ", rt.left, rt.top, rt.right, rt.bottom, rt.left/2, rt.top/2, rt.right/2, rt.bottom/2);
 		SelectObject(memDC, hOldBitmap);
 		DeleteDC(memDC);					//memDC삭제
 		EndPaint(hWnd, &ps);

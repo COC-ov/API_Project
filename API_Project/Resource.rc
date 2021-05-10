@@ -52,6 +52,8 @@ END
 
 IDB_BITMAP1             BITMAP                  "bitmap1.bmp"
 
+IDB_BITMAP2             BITMAP                  "C:\\Users\\조명주\\Downloads\\image.bmp"
+
 #endif    // 한국어(대한민국) resources
 /////////////////////////////////////////////////////////////////////////////
 
