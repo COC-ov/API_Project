@@ -51,11 +51,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	BITMAP bit;
 	static int r;
 	static char c;
+	static DWORD keyW;
 
 	switch (uMsg)
 	{
 	case WM_CREATE:
-		hBitmap = (HBITMAP)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP2));	//처음엔 안되었다가 껐다가키니까됨, 비트맵 이미지를 로드
+		hBitmap = (HBITMAP)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP3));	//처음엔 안되었다가 껐다가키니까됨, 비트맵 이미지를 로드
 		//비트맵의 정보를 알아낸다.
 		GetObject(hBitmap, sizeof(BITMAP), &bit);
 		bx = bit.bmWidth;	
@@ -74,27 +75,56 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			c = 'a';
 			GetClientRect(hWnd, &rt);	//작업영역의 크기 알아내기
 			break;
+		case '2':
+			c = '2';
+			GetClientRect(hWnd, &rt);	//작업영역의 크기 알아내기
+			break;
+		case '3':
+			c = '3';
+			GetClientRect(hWnd, &rt);	//작업영역의 크기 알아내기
+			break;
+		case 'q':
+		case 'Q':
+			PostQuitMessage(0);
+			break;
 		}
 
-		InvalidateRect(hWnd, NULL, FALSE);
+		InvalidateRect(hWnd, NULL, true);
 		break;
 
 	case WM_PAINT:
 		hDC = BeginPaint(hWnd, &ps);
 		memDC = CreateCompatibleDC(hDC);	//메모리디시인memedc생성
 		hOldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);		//memdc에 hBitmap을 서정
-		if(r%2==1)
-			BitBlt(hDC, 0, 0, bx, by, memDC, 0, 0, NOTSRCCOPY);
-		else if(c=='a')
-			StretchBlt(hDC, rt.left, rt.top, rt.right, rt.bottom, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
+		if (r % 2 == 1)
+			keyW = 0x00330008;
 		else
-			BitBlt(hDC, 0, 0, bx, by, memDC, 0, 0, SRCCOPY);
+			keyW = 0x00CC0020;
 
-		StretchBlt(hDC, rt.left, rt.top, rt.right/2, rt.bottom/2, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
-		StretchBlt(hDC, rt.right / 2, rt.bottom / 2, rt.right / 2, rt.bottom / 2, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
-		StretchBlt(hDC, rt.right / 2, rt.top, rt.right / 2, rt.bottom / 2, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
-		StretchBlt(hDC, rt.left, rt.bottom / 2, rt.right/2, rt.bottom/2, memDC, 0, 0, bx, by, SRCCOPY); //그림을 화면에 맞춰 출력
-		//printf("%d %d %d %d/%d %d %d %d ", rt.left, rt.top, rt.right, rt.bottom, rt.left/2, rt.top/2, rt.right/2, rt.bottom/2);
+		if (c == 'a')
+			StretchBlt(hDC, rt.left, rt.top, rt.right, rt.bottom, memDC, 0, 0, bx, by, keyW); //그림을 화면에 맞춰 출력
+		else if (c == '2')
+		{
+			StretchBlt(hDC, rt.left, rt.top, rt.right / 2, rt.bottom / 2, memDC, 0, 0, bx, by, keyW); //1
+			StretchBlt(hDC, rt.right / 2, rt.bottom / 2, rt.right / 2, rt.bottom / 2, memDC, 0, 0, bx, by, keyW); //2
+			StretchBlt(hDC, rt.right / 2, rt.top, rt.right / 2, rt.bottom / 2, memDC, 0, 0, bx, by, keyW); //3
+			StretchBlt(hDC, rt.left, rt.bottom / 2, rt.right / 2, rt.bottom / 2, memDC, 0, 0, bx, by, keyW); //4
+		}
+		else if (c == '3')
+		{
+			StretchBlt(hDC, rt.left, rt.top, rt.right / 3, rt.bottom / 3, memDC, 0, 0, bx, by, keyW); //1
+			StretchBlt(hDC, rt.right / 3, rt.top, rt.right / 3, rt.bottom / 3, memDC, 0, 0, bx, by, keyW); //2
+			StretchBlt(hDC, rt.right / 3 * 2, rt.top, rt.right / 3, rt.bottom / 3, memDC, 0, 0, bx, by, keyW); //3
+			StretchBlt(hDC, rt.left, rt.bottom / 3, rt.right / 3, rt.bottom / 3, memDC, 0, 0, bx, by, keyW); //4
+			StretchBlt(hDC, rt.right / 3, rt.bottom / 3, rt.right / 3, rt.bottom / 3, memDC, 0, 0, bx, by, keyW); //5
+			StretchBlt(hDC, rt.right / 3 * 2, rt.bottom / 3, rt.right / 3, rt.bottom / 3, memDC, 0, 0, bx, by, keyW); //6
+			StretchBlt(hDC, rt.left, rt.bottom / 3 * 2, rt.right / 3, rt.bottom / 3, memDC, 0, 0, bx, by, keyW); //7
+			StretchBlt(hDC, rt.right / 3, rt.bottom / 3 * 2, rt.right / 3, rt.bottom / 3, memDC, 0, 0, bx, by, keyW); //8
+			StretchBlt(hDC, rt.right / 3 * 2, rt.bottom / 3 * 2, rt.right / 3, rt.bottom / 3, memDC, 0, 0, bx, by, keyW); //9
+		}
+		else
+			BitBlt(hDC, 0, 0, bx, by, memDC, 0, 0, keyW);
+		
 		SelectObject(memDC, hOldBitmap);
 		DeleteDC(memDC);					//memDC삭제
 		EndPaint(hWnd, &ps);
