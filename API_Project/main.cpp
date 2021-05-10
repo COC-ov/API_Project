@@ -45,7 +45,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	HDC hDC, memDC;
 	PAINTSTRUCT ps;
-	static HBITMAP hBitmap;
+	static HBITMAP hBitmap, hOldBitmap;
 	static int bx, by;	//비트맵의 정보 저장
 	BITMAP bit;
 
@@ -62,8 +62,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 		hDC = BeginPaint(hWnd, &ps);
 		memDC = CreateCompatibleDC(hDC);	//메모리디시인memedc생성
-		SelectObject(memDC, hBitmap);		//memdc에 hBitmap을 서정
+		hOldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);		//memdc에 hBitmap을 서정
 		StretchBlt(hDC, 0, 0, bx * 2, by, memDC, 0, 0, bx, by, SRCCOPY); //그림을 가로로 2배 늘려서 출력
+		SelectObject(memDC, hOldBitmap);
 		DeleteDC(memDC);					//memDC삭제
 		EndPaint(hWnd, &ps);
 		break;
