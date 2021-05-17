@@ -60,7 +60,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg)
 	{
 	case WM_CREATE:
-		hBitmap = (HBITMAP)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP1));	//처음엔 안되었다가 껐다가키니까됨, 비트맵 이미지를 로드
+		hBitmap = (HBITMAP)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP3));	//처음엔 안되었다가 껐다가키니까됨, 비트맵 이미지를 로드
 		//비트맵의 정보를 알아낸다.
 		GetObject(hBitmap, sizeof(BITMAP), &bit);
 		bx = bit.bmWidth;	
@@ -104,6 +104,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		
 	case WM_KEYDOWN:
 		if (wParam == VK_LEFT) move[select] -= 40;
+		if (wParam == VK_RIGHT) move[select] += 40;
 		InvalidateRect(hWnd, NULL, true);
 		break;
 
@@ -132,9 +133,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					StretchBlt(hDC, w * j + move[num], h * i, w, h, memDC, 0, 0, bx, by, keyW);
 					if (InBitmap(mx - w * j, my - h * i, w, h))
 					{
-						Rectangle(hDC, w * j + move[num], h * i,
-							w * (j + 1) + move[num], h * (i + 1));
+						Rectangle(hDC, w * j + move[num], h * i, w * (j + 1) + move[num], h * (i + 1));
 						select = num;
+					}
+
+					if (w * j + move[num]+w > rt.right)
+						StretchBlt(hDC,	w * j + move[num]-rt.right, h * i, w, h, memDC, 0, 0, bx, by, keyW);
+					else if (w * j + move[num] < 0)
+						StretchBlt(hDC, rt.right +w * j + move[num], h * i, w, h, memDC, 0, 0, bx, by, keyW);
+
+					if (select == num)
+					{
+						if (w * j + move[num] + w > rt.right)
+							Rectangle(hDC, w * j + move[num] - rt.right, h * i,w * (j + 1) + move[num] - rt.right, h * (i + 1));
+						else if (w * j + move[num] < 0)
+							Rectangle(hDC, rt.right + w * j + move[num], h * i, rt.right + w * (j + 1) + move[num], h * (i + 1));
 					}
 					num++;
 				}
@@ -153,9 +166,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					StretchBlt(hDC, w * j + move[num], h * i, w, h, memDC, 0, 0, bx, by, keyW);
 					if (InBitmap(mx - w * j, my - h * i, w, h))
 					{
-						Rectangle(hDC, w * j + move[num], h * i,
-							w * (j + 1) + move[num], h * (i + 1));
+						Rectangle(hDC, w * j + move[num], h * i, w * (j + 1) + move[num], h * (i + 1));
 						select = num;
+					}
+
+					if (w * j + move[num] + w > rt.right)
+						StretchBlt(hDC, w * j + move[num] - rt.right, h * i, w, h, memDC, 0, 0, bx, by, keyW);
+					else if (w * j + move[num] < 0)
+						StretchBlt(hDC, rt.right + w * j + move[num], h * i, w, h, memDC, 0, 0, bx, by, keyW);
+
+					if (select == num)
+					{
+						if (w * j + move[num] + w > rt.right)
+							Rectangle(hDC, w * j + move[num] - rt.right, h * i, w * (j + 1) + move[num] - rt.right, h * (i + 1));
+						else if (w * j + move[num] < 0)
+							Rectangle(hDC, rt.right + w * j + move[num], h * i, rt.right + w * (j + 1) + move[num], h * (i + 1));
 					}
 					num++;
 				}
