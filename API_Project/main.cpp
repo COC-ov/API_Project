@@ -29,7 +29,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	wndClass.lpszMenuName = NULL;
 	wndClass.lpszClassName = className;
 	RegisterClass(&wndClass);
-	hWnd = CreateWindow(className, titleName, WS_OVERLAPPEDWINDOW,
+	hWnd = CreateWindow(className, titleName, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
 		NULL, NULL, hInstance, NULL);
 	ShowWindow(hWnd, nCmdShow);
@@ -74,8 +74,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case'R':
 			r++;
 			break;
-		case 'a':
 		case 'A':
+		case 'a':
 			c = 'a';
 			GetClientRect(hWnd, &rt);	//작업영역의 크기 알아내기
 			break;
@@ -120,7 +120,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			keyW = 0x00CC0020;
 
 		if (c == 'a')
-			StretchBlt(hDC, rt.left, rt.top, rt.right, rt.bottom, memDC, 0, 0, bx, by, keyW); //그림을 화면에 맞춰 출력
+		{
+			StretchBlt(hDC, rt.left+move[0], rt.top, rt.right, rt.bottom, memDC, 0, 0, bx, by, keyW); //전체그림 보기
+
+			if (rt.left + move[0] + rt.right > rt.right)
+				StretchBlt(hDC, rt.left + move[0] - rt.right, rt.top, rt.right, rt.bottom, memDC, 0, 0, bx, by, keyW);
+			else if (rt.left + move[0] < 0)
+				StretchBlt(hDC, rt.left + move[0] + rt.right, rt.top, rt.right, rt.bottom, memDC, 0, 0, bx, by, keyW);
+		}
 		else if (c == '2')
 		{
 			w = rt.right / 2;
@@ -132,10 +139,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				{	
 					StretchBlt(hDC, w * j + move[num], h * i, w, h, memDC, 0, 0, bx, by, keyW);
 					if (InBitmap(mx - w * j, my - h * i, w, h))
-					{
-						Rectangle(hDC, w * j + move[num], h * i, w * (j + 1) + move[num], h * (i + 1));
 						select = num;
-					}
 
 					if (w * j + move[num]+w > rt.right)
 						StretchBlt(hDC,	w * j + move[num]-rt.right, h * i, w, h, memDC, 0, 0, bx, by, keyW);
@@ -144,6 +148,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 					if (select == num)
 					{
+						Rectangle(hDC, w * j + move[num], h * i, w * (j + 1) + move[num], h * (i + 1));
 						if (w * j + move[num] + w > rt.right)
 							Rectangle(hDC, w * j + move[num] - rt.right, h * i,w * (j + 1) + move[num] - rt.right, h * (i + 1));
 						else if (w * j + move[num] < 0)
@@ -165,10 +170,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				{
 					StretchBlt(hDC, w * j + move[num], h * i, w, h, memDC, 0, 0, bx, by, keyW);
 					if (InBitmap(mx - w * j, my - h * i, w, h))
-					{
-						Rectangle(hDC, w * j + move[num], h * i, w * (j + 1) + move[num], h * (i + 1));
 						select = num;
-					}
 
 					if (w * j + move[num] + w > rt.right)
 						StretchBlt(hDC, w * j + move[num] - rt.right, h * i, w, h, memDC, 0, 0, bx, by, keyW);
@@ -177,6 +179,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 					if (select == num)
 					{
+						Rectangle(hDC, w * j + move[num], h * i, w * (j + 1) + move[num], h * (i + 1));
 						if (w * j + move[num] + w > rt.right)
 							Rectangle(hDC, w * j + move[num] - rt.right, h * i, w * (j + 1) + move[num] - rt.right, h * (i + 1));
 						else if (w * j + move[num] < 0)
@@ -188,7 +191,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			num = 0;
 		}
 		else
-			BitBlt(hDC, 0, 0, bx, by, memDC, 0, 0, keyW);
+			BitBlt(hDC, move[0], 0, bx, by, memDC, 0, 0, keyW);
 		
 		SelectObject(memDC, hOldBitmap);
 		DeleteDC(memDC);					//memDC삭제
