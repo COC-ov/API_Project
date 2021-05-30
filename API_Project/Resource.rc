@@ -81,14 +81,39 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// Menu
+//
+
+IDR_MENU1 MENU
+BEGIN
+    POPUP "그림"
+    BEGIN
+        MENUITEM "그림1",                         ID_paint1
+        MENUITEM "그림2",                         ID_paint2
+    END
+    POPUP "그림나누기"
+    BEGIN
+        MENUITEM "3",                           ID_split3
+        MENUITEM "4",                           ID_split4
+        MENUITEM "5",                           ID_split5
+    END
+    POPUP "게임"
+    BEGIN
+        MENUITEM "게임으로",                        ID_start
+        MENUITEM "전체그림보기",                      ID_full
+        MENUITEM "종료",                          ID_end
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // Bitmap
 //
 
 IDB_BITMAP1             BITMAP                  "bitmap1.bmp"
 
 IDB_BITMAP2             BITMAP                  "bitmap2.bmp"
-
-IDB_BITMAP3             BITMAP                  "bitmap3.bmp"
 
 #endif    // 한국어(대한민국) resources
 /////////////////////////////////////////////////////////////////////////////
