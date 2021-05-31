@@ -5,15 +5,13 @@
 #include <time.h>
 #include "resource.h"
 
-//#pragma comment(linker, "/entry:WinMainCRTStartup /subsystem:console")	//콘솔창 띄움
+#pragma comment(linker, "/entry:WinMainCRTStartup /subsystem:console")	//콘솔창 띄움
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-void Split(HDC hDC, HDC memDC, int id, RECT rt, struct Draw paint[],
-	int piece, BOOL numClick, int md, BOOL* mousePiece, BOOL);	//퍼즐 조각을 띄움
-void Mix(int piece, struct Paint pos[]);	//퍼즐 조각의 위치를 랜덤으로 섞음
-int Mouse_Direct(int, int, int, int);	//마우스의 이동방향을 반환
-void MovePuzzle(struct Draw paint[], HDC hDC, HDC memDC, int md,
-	static struct Paint pos[], int id, int piece, int ww, int wh, int pw, int ph);
+void Expand(float expand, HDC hDC, HDC memDC, int startX, int startY, int endX, int endY, float rx, float ry, HBITMAP paint);
+void paste(struct Paint* copy, RECT rt, HDC hDC, HDC memDC, HBITMAP paint, int startX, int startY, int endX, int endY);
+void pasteH(struct Paint* copy, RECT rt, HDC hDC, HDC memDC, HBITMAP paint, int startX, int startY, int endX, int endY);
+void pasteV(struct Paint* copy, RECT rt, HDC hDC, HDC memDC, HBITMAP paint, int startX, int startY, int endX, int endY);
 
 HINSTANCE hInst;
 
@@ -26,7 +24,7 @@ struct Draw
 
 struct Paint
 {
-	int wx, wy, px, py;
+	float cx, cy, cw, ch;
 };
 //밑그림의 정보를 담을 구조체
 
@@ -37,7 +35,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	MSG msg;
 	WNDCLASS wndClass;
 	TCHAR className[11] = L"Class Name";
-	TCHAR titleName[10] = L"윈플실습 5-2";
+	TCHAR titleName[10] = L"윈플실습 5-3";
 	hInst = hInstance;
 
 
@@ -49,11 +47,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wndClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-	wndClass.lpszMenuName = MAKEINTRESOURCE(IDR_MENU1);	//메뉴정의
+	wndClass.lpszMenuName = MAKEINTRESOURCE(IDR_MENU1);
 	wndClass.lpszClassName = className;
 	RegisterClass(&wndClass);
 	hWnd = CreateWindow(className, titleName, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
-		300, 50, 500, 600,
+		50, 40, 1000, 600,
 		NULL, NULL, hInstance, NULL);
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
@@ -69,17 +67,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	HDC hDC, memDC;
 	PAINTSTRUCT ps;
-	static int id,	//비트맵의 정보 저장
-		piece = 3,		//퍼즐의 조각
-		mx, my,			//마우스 좌표저장
-		md;				//마우스의 방향
+	static int cnt, id,
+		startX, startY,			//돋보기의 시작좌표(눌렸을때)
+		endX, endY,			//돋보기의 끝좌표(떨어졌을때)
+		dragX, dragY,		//드레그 될동안의 좌표
+		Draw, mx, my, m;
+	static float rx, ry,	//그림과 화면의 비율
+		expand = 1;
 	static RECT rt;	//윈도우의 작업영역의 크기 저장
 	BITMAP bit;
-	static char c;
 	static struct Draw paint[2];
-	static BOOL numClick = TRUE,
-		movePiece = FALSE, end = FALSE;
-
+	static struct Paint copy;
+	static char c;
+	static BOOL Paste = FALSE;
 	switch (uMsg)
 	{
 	case WM_CREATE:
@@ -96,109 +96,236 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		//작업영역의 크기 알아내기
 		GetClientRect(hWnd, &rt);
+		rx = (float)rt.right / paint[id].bx;
+		ry = (float)rt.bottom / paint[id].by;
 		break;
-	case WM_LBUTTONDOWN:
-		mx = LOWORD(lParam);
-		my = HIWORD(lParam);
-		movePiece = TRUE;
+	case WM_LBUTTONDOWN:		//돋보기의 시작 좌표를 알아냄
+		if (Draw == 0)
+		{
+			startX = dragX = LOWORD(lParam);
+			startY = dragY = HIWORD(lParam);
+			Draw++;
+		}
+		break;
+
+	case WM_MOUSEMOVE:			//돋보기 사각형을 그릴 끝 좌표를 알아냄
+		hDC = GetDC(hWnd);
+		if (Draw==1)
+		{
+			SetROP2(hDC, R2_XORPEN);
+			SelectObject(hDC, (HPEN)GetStockObject(WHITE_PEN));
+			SelectObject(hDC, (HBRUSH)GetStockObject(NULL_BRUSH));
+			//printf("%d %d %d %d \n", startX, startY, endX, endY);
+			endX = LOWORD(lParam);
+			endY = HIWORD(lParam);
+			Rectangle(hDC, startX, startY, dragX, dragY);
+			Rectangle(hDC, startX, startY, endX, endY);
+			dragX = endX;
+			dragY = endY;
+		}
+		ReleaseDC(hWnd, hDC);
 		break;
 
 	case WM_LBUTTONUP:
-		md = Mouse_Direct(LOWORD(lParam), HIWORD(lParam), mx, my);
-		//printf("%d %d %d %d -%d\n", LOWORD(lParam), HIWORD(lParam), mx, my, md);
-		InvalidateRect(hWnd, NULL, TRUE);
+		Draw++;
 		break;
 
-	case WM_COMMAND:		//메뉴 입력
+	case WM_KEYDOWN:
+		if (Paste == TRUE)
+		{
+			switch (wParam)
+			{
+			case VK_RIGHT:   // 오른쪽 키가 눌러졌을때.
+				mx += 40;
+				break;
+			case VK_LEFT:   // 왼쪽키가 눌러졌을때.
+				mx -= 40;
+				break;
+			case VK_UP:    // 위쪽 키가 눌러졌을때.
+				my -= 40;
+				break;
+			case VK_DOWN:    // 아래쪽 키가 눌러 졌을때.
+				my += 40;
+				break;
+			}
+			InvalidateRect(hWnd, NULL, true);
+		}
+		break;
+		//ㅡㅡㅡ메뉴ㅡㅡㅡ
+	case WM_COMMAND:
+		hDC = GetDC(hWnd);
+		memDC = CreateCompatibleDC(hDC);	//메모리디시인memedc생성
+
 		switch (LOWORD(wParam))
 		{
-		case ID_paint1:
+		case ID_Image1:	//이미지 1
 			id = 0;
+			Draw = 0;
+			rx = (float)rt.right / paint[id].bx;
+			ry = (float)rt.bottom / paint[id].by;
+			startX=0, startY=0,			//돋보기의 시작좌표(눌렸을때)
+				endX=0, endY = 0;			//돋보기의 끝좌표(떨어졌을때)
+			Draw = 0;
+			mx = 0, my = 0, m = 0;
+			Paste = FALSE;
+			expand = 1;
 			break;
-		case ID_full:
-			c = 'f';
+		case ID_Image2:	//이미지 2
+			Draw = 0;
+			rx = (float)rt.right / paint[id].bx;
+			ry = (float)rt.bottom / paint[id].by;
+			startX = 0, startY = 0,			//돋보기의 시작좌표(눌렸을때)
+				endX = 0, endY = 0;			//돋보기의 끝좌표(떨어졌을때)
+			Draw = 0;
+			mx = 0, my = 0, m = 0;
+			expand = 1;
+			Paste = FALSE;
 			break;
-		case ID_paint2:
-			id = 1;
+		case ID_Expand1:
+			expand = 1.2;
 			break;
-		case ID_start:
-			c = 's';	//퍼즐 로드
+		case ID_Expand2:
+			expand = 1.4;
 			break;
-		case ID_split3:
-			piece = 3;	//3x3퍼즐
+		case ID_Origin:
+			expand = 1;
 			break;
-		case ID_split4:
-			piece = 4;	//4x4퍼즐
+		case ID_C:
+			Paste = TRUE;
 			break;
-		case ID_split5:
-			piece = 5;
+		case ID_V:
+			c = 'p';
 			break;
-		case ID_end:
-			end = TRUE;
+		case ID_FullV:
+			cnt++;
 			break;
 		}
 
-		if (LOWORD(wParam) == ID_paint1 || LOWORD(wParam) == ID_paint2 || LOWORD(wParam) == ID_split3 ||
-			LOWORD(wParam) == ID_split4 || LOWORD(wParam) == ID_split5)
-			numClick = TRUE;
+		if (LOWORD(wParam) != ID_C)
+			InvalidateRect(hWnd, NULL, true);
 
-		InvalidateRect(hWnd, NULL, true);
+		DeleteDC(memDC);				//memDC삭제
+		DeleteDC(hDC);					//memDC삭제
 		break;
 
 	case WM_CHAR:		//키보드 입력
+		hDC = GetDC(hWnd);
+		memDC = CreateCompatibleDC(hDC);	//메모리디시인memedc생성
+
 		switch (wParam)
 		{
-		case 'F':
-		case 'f':		//전체 그림 보여주기
-			c = 'f';
-			break;
-		case '1':		//밑그림 1
+		case '1':		//이미지 1
 			id = 0;
-			break;		//밑그림 2
-		case '2':	
-			id = 1;
+			rx = (float)rt.right / paint[id].bx;
+			ry = (float)rt.bottom / paint[id].by;
+			startX = 0, startY = 0,			//돋보기의 시작좌표(눌렸을때)
+				endX = 0, endY = 0;			//돋보기의 끝좌표(떨어졌을때)
+			Draw = 0;
+			mx = 0, my = 0, m = 0;
+			Paste = FALSE;
+			expand = 1;
 			break;
-		case 's':
-		case 'S':
-			c = 's';	//퍼즐 로드
+		case '2':		//이미지 2
+			id = 1;
+			rx = (float)rt.right / paint[id].bx;
+			ry = (float)rt.bottom / paint[id].by;
+			startX = 0, startY = 0,			//돋보기의 시작좌표(눌렸을때)
+				endX = 0, endY = 0;			//돋보기의 끝좌표(떨어졌을때)
+			Draw = 0;
+			mx = 0, my = 0, m = 0;
+			expand = 1;
+			Paste = FALSE;
+			break;
+		case 'R':
+		case 'r':
+			startX = 0, startY = 0,			//돋보기의 시작좌표(눌렸을때)
+				endX = 0, endY = 0;			//돋보기의 끝좌표(떨어졌을때)
+			Draw = 0;
+			mx = 0, my = 0, m = 0;
+			Paste = FALSE;
+			expand = 1;
 			break;
 		case '3':
-			piece = 3;	//3x3퍼즐
+			expand = 1.2;
 			break;
 		case '4':
-			piece = 4;	//4x4퍼즐
+			expand = 1.4;
 			break;
-		case '5':		//5x5퍼즐
-			piece = 5;
+		case '0':
+			expand = 1;
 			break;
-		case 'q':		//종료
-		case 'Q':
-			end = TRUE;
+		case 'c':
+			Paste = TRUE;
+			break;
+		case 'p':
+			Paste = TRUE;
+			c = 'p';
+			break;
+		case 'm':
+			m+=40;
+			break;
+		case 'n':
+			m -= 40;
+			break;
+		case 'f':
+			cnt++;
+			break;
+		case 'h':
+		case 'H':
+			c = 'h';
+			break;
+		case 'v':
+		case 'V':
+			c = 'v';
+			break;
+		case 'Q':		//종료
+		case 'q':
+			PostQuitMessage(0);
 			break;
 		}
 
-		if(wParam == '1' || wParam=='2'||wParam=='3'|| wParam == '4'|| wParam == '5')
-			numClick = TRUE;
+		if(wParam != 'c')
+			InvalidateRect(hWnd, NULL, true);
 
-		InvalidateRect(hWnd, NULL, true);
+		DeleteDC(memDC);				//memDC삭제
+		DeleteDC(hDC);					//memDC삭제
 		break;
 
 	case WM_PAINT:
 		hDC = BeginPaint(hWnd, &ps);
 		memDC = CreateCompatibleDC(hDC);	//메모리디시인memedc생성
 
-		(HBITMAP)SelectObject(memDC, paint[id].hBitmap);	//비트맵 선택
-		//BitBlt(hDC,0, 0, paint[id].bx, paint[id].by, memDC, 0, 0, SRCCOPY);	//그냥 출력
+		SelectObject(memDC, paint[id].hBitmap);	//비트맵 선택
 
-		switch (c)
+		if (cnt % 2 == 1)
+			StretchBlt(hDC, rt.left, rt.top, rt.right, rt.bottom, memDC, copy.cx, copy.cy, copy.cw, copy.ch, SRCCOPY);
+		else
 		{
-		case 'f':
-			StretchBlt(hDC, rt.left, rt.top, rt.right, rt.bottom, memDC, 0, 0, paint[id].bx, paint[id].by, SRCCOPY); //화면에 맞춰서 출력
-			break;
-		case 's':
-			Split(hDC, memDC, id, rt, paint, piece, numClick, md, &movePiece, end);
-			numClick = FALSE;
-			break;
+			StretchBlt(hDC, rt.left, rt.top, rt.right, rt.bottom, memDC, 0, 0, paint[id].bx, paint[id].by, SRCCOPY);	//이미지를 화면에 출력
+			Expand(expand, hDC, memDC, startX + mx, startY + my, endX - startX+m, endY - startY+m, rx, ry, paint[id].hBitmap);
+		}
+
+
+		//ㅡㅡㅡ돋보기 사각형을 그림ㅡㅡㅡ
+
+		SetROP2(hDC, R2_XORPEN);
+		SelectObject(hDC, (HPEN)GetStockObject(WHITE_PEN));
+		SelectObject(hDC, (HBRUSH)GetStockObject(NULL_BRUSH));
+		Rectangle(hDC, startX+mx, startY+my, endX+mx+m, endY+my+m);
+
+		printf("%c %d", c, Paste);
+		if (Paste == TRUE)
+		{
+			copy.cx = (startX + mx) / rx;
+			copy.cy = (startY + my) / ry;
+			copy.cw = (endX - startX + m) / rx / expand;
+			copy.ch = (endY - startY + m) / ry / expand;		//이미지 복사 정보 저장
+			if (c == 'p')
+				paste(&copy, rt, hDC, memDC, paint[id].hBitmap, startX, startY, endX + m, endY + m);
+			if (c == 'h')
+				pasteH(&copy, rt, hDC, memDC, paint[id].hBitmap, startX, startY, endX + m, endY + m);
+			if (c == 'v')
+				pasteV(&copy, rt, hDC, memDC, paint[id].hBitmap, startX, startY, endX + m, endY + m);
 		}
 
 		DeleteDC(memDC);				//memDC삭제
@@ -215,123 +342,37 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-void Split(HDC hDC, HDC memDC, int id, RECT rt, struct Draw paint[], int piece, BOOL numClick, int md, BOOL* movePiece, BOOL end)
+void Expand(float expand, HDC hDC, HDC memDC, int x, int y, int w, int h, float rx, float ry, HBITMAP paint)
 {
-	int ww = rt.right / piece, wh = rt.bottom / piece,	//화면의 너비와 높이
-		pw = paint[id].bx / piece, ph = paint[id].by / piece;	//그림의 너비와 높이
-	static struct Paint pos[25];
-	BOOL mixPuzzle = TRUE;
+	SelectObject(memDC, paint);	//비트맵 선택
 
-	//ㅡㅡㅡ퍼즐을 랜덤으로 섞음ㅡㅡㅡ
-	if (numClick)	//숫자키를 눌렀을때만 값이 섞이도록 조절
-		Mix(piece, pos);
-
-	//ㅡㅡㅡ퍼즐을 출력ㅡㅡㅡㅡ
-	for (int i = 1; i < piece * piece; ++i)	//0번 조각은 출력 안함
-		StretchBlt(hDC, ww * pos[i].wx, wh * pos[i].wy, ww, wh,		//위치
-			memDC, paint[id].bx / piece * pos[i].px, paint[id].by / piece * pos[i].py, pw, ph, SRCCOPY);	//조각
-
-	if ((pos[0].wx == 0 &&md == 3) || (pos[0].wx == piece - 1 && md == 4)|| 
-		(pos[0].wy == 0 && md == 2)|| (pos[0].wy == piece - 1 && md == 1))
-		mixPuzzle = FALSE;
-
-
-	//ㅡㅡㅡ마우스로 퍼즐을 이동시킴ㅡㅡㅡ
-	if (*movePiece == TRUE&&end==FALSE&&mixPuzzle==TRUE)
-	{
-		*movePiece = FALSE;
-		MovePuzzle(paint, hDC, memDC, md, pos, id, piece, ww, wh, pw, ph);
-	}	
+	StretchBlt(hDC, x, y, w, h,
+		memDC, x / rx, y / ry, w / rx / expand, h / ry / expand, SRCCOPY);	//이미지를 화면에 출력
 }
 
-void Mix(int piece, struct Paint pos[])	//퍼즐 조각의 위치를 랜덤으로 섞음f
+void paste(struct Paint* copy, RECT rt, HDC hDC, HDC memDC, HBITMAP paint, int startX, int startY, int endX, int endY )
 {
-	int rn, temp, num, k = 0;
-
-	for (int i = 0; i < piece; ++i)	//퍼즐의 위치와 조각의 종류를 그림 순서대로 구조체에 담음
-	{
-		for (int j = 0; j < piece; ++j)
-		{
-			pos[k].wx = i;
-			pos[k].wy = j;
-			pos[k].px = i;
-			pos[k].py = j;
-			k++;
-		}
-	}
-
-	for (int i = 0; i < piece*piece - 1; ++i)	//퍼즐의 위치를 섞는다
-	{
-		srand(time(NULL));
-		rn = rand() % (piece*piece - i) + i; // i 부터 num-1 사이에 임의의 정수 생성 
-
-		temp = pos[i].wx; 
-		pos[i].wx = pos[rn].wx; 
-		pos[rn].wx = temp; 
-
-		temp = pos[i].wy;
-		pos[i].wy = pos[rn].wy;
-		pos[rn].wy = temp;
-	}
-
+	SelectObject(memDC, paint);	//비트맵 선택
+	StretchBlt(hDC, rt.left, rt.top, endX - startX, endY - startY, memDC, copy->cx, copy->cy, copy->cw, copy->ch, SRCCOPY);
+	SelectObject(hDC, (HPEN)GetStockObject(WHITE_PEN));
+	SelectObject(hDC, (HBRUSH)GetStockObject(NULL_BRUSH));
+	Rectangle(hDC, rt.left, rt.top, endX - startX, endY - startY);
 }
-
-int Mouse_Direct(int mxPos, int myPos, int mx, int my)	//1이면 위 2면 아래 3이면 왼쪽 4면 오른쪽 다 아니면 0
+//--- 상하 반전출력 ---
+void pasteH(struct Paint* copy, RECT rt, HDC hDC, HDC memDC, HBITMAP paint, int startX, int startY, int endX, int endY )
 {
-	int wide = 40;
-
-	if (mx - wide <= mxPos && mxPos <= mx + wide && myPos < my - wide)
-		return 1;
-	else if (mx - wide <= mxPos && mxPos <= mx + wide && my + wide < myPos)
-		return 2;
-	else if (my - wide <= myPos && myPos <= my + wide && mx + wide < mxPos)
-		return 3;
-	else if (my - wide <= myPos && myPos <= my + wide && mxPos < mx - wide)
-		return 4;
-	else return 0;
+	SelectObject(memDC, paint);	//비트맵 선택
+	StretchBlt(hDC, rt.left, rt.top, endX - startX, endY - startY, memDC, copy->cx + copy->cw, copy->cy + copy->ch, -copy->cw, -copy->ch, SRCCOPY);
+	SelectObject(hDC, (HPEN)GetStockObject(WHITE_PEN));
+	SelectObject(hDC, (HBRUSH)GetStockObject(NULL_BRUSH));
+	Rectangle(hDC, rt.left, rt.top, endX - startX, endY - startY);
 }
-
-void MovePuzzle(struct Draw paint[], HDC hDC, HDC memDC, int md,
-	static struct Paint pos[], int id, int piece, int ww, int wh, int pw, int ph)
+//--- 좌우 반전출력 ---
+void pasteV(struct Paint* copy, RECT rt, HDC hDC, HDC memDC, HBITMAP paint, int startX, int startY, int endX, int endY)
 {
-	int wx = 0, wy = 0,		//퍼즐이 움직인 정보
-	pid = 0;		//움직이려는 퍼즐의 아이디
-
-		switch (md)
-		{
-		case 1:	//위로 이동
-			pos[0].wy++;
-			wy--;
-			break;
-		case 2:	//아래로 이동
-			pos[0].wy--;
-			wy++;
-			break;
-		case 3:	//왼쪽 이동
-			pos[0].wx--;
-			wx++;
-			break;
-		case 4:	//오른쪽 이동
-			pos[0].wx++;
-			wx--;
-			break;
-		}
-
-		for (int i = 1; i < piece * piece; ++i)
-			if (pos[0].wx == pos[i].wx && pos[0].wy == pos[i].wy)
-				pid = i;
-
-		if (md != 0 )
-		{
-			//ㅡㅡㅡ0.01씩 이동하면서 퍼즐을 출력ㅡㅡㅡ
-			for (float i = 0; i <= 1; i += 0.01)
-				StretchBlt(hDC, ww * (pos[pid].wx + i * wx), wh * (pos[pid].wy + i * wy), ww, wh,		//위치
-					memDC, paint[id].bx / piece * pos[pid].px, paint[id].by / piece * pos[pid].py, pw, ph, SRCCOPY);	//조각
-			//ㅡㅡㅡ흔적을 지움ㅡㅡㅡ
-			StretchBlt(hDC, ww * pos[0].wx, wh * pos[0].wy, ww, wh,		//위치
-				memDC, paint[id].bx / piece * pos[0].px, paint[id].by / piece * pos[0].py, pw, ph, WHITENESS);	//조각
-		}
-
-		pos[pid].wx += wx;
-		pos[pid].wy += wy;
+	SelectObject(memDC, paint);	//비트맵 선택
+	StretchBlt(hDC, rt.left, rt.top, endX - startX, endY - startY, memDC, copy->cx + copy->cw, copy->cy , -copy->cw, copy->ch, SRCCOPY);
+	SelectObject(hDC, (HPEN)GetStockObject(WHITE_PEN));
+	SelectObject(hDC, (HBRUSH)GetStockObject(NULL_BRUSH));
+	Rectangle(hDC, rt.left, rt.top, endX - startX, endY - startY);
 }

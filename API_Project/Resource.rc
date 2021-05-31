@@ -42,68 +42,7 @@ BEGIN
     "\0"
 END
 
-1 TEXTINCLUDE 
-BEGIN
-    "resource2.h\0"
-END
-
-2 TEXTINCLUDE 
-BEGIN
-    "#include ""winres.h""\r\n"
-    "\0"
-END
-
-3 TEXTINCLUDE 
-BEGIN
-    "\r\n"
-    "\0"
-END
-
-1 TEXTINCLUDE 
-BEGIN
-    "resource.h\0"
-END
-
-2 TEXTINCLUDE 
-BEGIN
-    "#include ""winres.h""\r\n"
-    "\0"
-END
-
-3 TEXTINCLUDE 
-BEGIN
-    "\r\n"
-    "\0"
-END
-
 #endif    // APSTUDIO_INVOKED
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Menu
-//
-
-IDR_MENU1 MENU
-BEGIN
-    POPUP "그림"
-    BEGIN
-        MENUITEM "그림1",                         ID_paint1
-        MENUITEM "그림2",                         ID_paint2
-    END
-    POPUP "그림나누기"
-    BEGIN
-        MENUITEM "3",                           ID_split3
-        MENUITEM "4",                           ID_split4
-        MENUITEM "5",                           ID_split5
-    END
-    POPUP "게임"
-    BEGIN
-        MENUITEM "게임으로",                        ID_start
-        MENUITEM "전체그림보기",                      ID_full
-        MENUITEM "종료",                          ID_end
-    END
-END
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -114,6 +53,33 @@ END
 IDB_BITMAP1             BITMAP                  "bitmap1.bmp"
 
 IDB_BITMAP2             BITMAP                  "bitmap2.bmp"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU
+BEGIN
+    POPUP "이미지"
+    BEGIN
+        MENUITEM "첫번째 이미지",                     ID_Image1
+        MENUITEM "두번째 이미지",                     ID_Image2
+    END
+    POPUP "돋보기"
+    BEGIN
+        MENUITEM "돋보기1[x1.2]",                  ID_Expand1
+        MENUITEM "돋보기2[x1.4]",                  ID_Expand2
+        MENUITEM "제자리",                         40009
+    END
+    POPUP "복사"
+    BEGIN
+        MENUITEM "복사",                          ID_C
+        MENUITEM "붙여넣기",                        ID_V
+        MENUITEM "전체붙여넣기",                      ID_FullV
+    END
+END
 
 #endif    // 한국어(대한민국) resources
 /////////////////////////////////////////////////////////////////////////////
