@@ -12,6 +12,7 @@ void Expand(float expand, HDC hDC, HDC memDC, int startX, int startY, int endX, 
 void paste(struct Paint* copy, RECT rt, HDC hDC, HDC memDC, HBITMAP paint, int startX, int startY, int endX, int endY);
 void pasteH(struct Paint* copy, RECT rt, HDC hDC, HDC memDC, HBITMAP paint, int startX, int startY, int endX, int endY);
 void pasteV(struct Paint* copy, RECT rt, HDC hDC, HDC memDC, HBITMAP paint, int startX, int startY, int endX, int endY);
+void OnTimer(HWND hWnd, int* mx, int* my, int* xi, int* yi, int pw, int ph, int startX, int startY);
 
 HINSTANCE hInst;
 
@@ -63,6 +64,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	return (int)msg.wParam;
 }
 
+void OnTimer(HWND hWnd, int* mx, int* my, int* xi, int* yi, int pw, int ph, int startX, int startY)
+{	RECT crt;
+	GetClientRect(hWnd, &crt);
+	if (*mx+ startX <= crt.left || *mx >= crt.right-pw)
+		*xi *= -1;
+	if (*my+startY <= crt.top || *my >= crt.bottom - ph)
+		*yi *= -1;
+
+	*mx += *xi;
+	*my += *yi;
+
+	InvalidateRect(hWnd, NULL, TRUE);
+}
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	HDC hDC, memDC;
@@ -71,7 +85,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		startX, startY,			//돋보기의 시작좌표(눌렸을때)
 		endX, endY,			//돋보기의 끝좌표(떨어졌을때)
 		dragX, dragY,		//드레그 될동안의 좌표
-		Draw, mx, my, m;
+		Draw, mx, my, m, num,
+		xi=4, yi=5;
 	static float rx, ry,	//그림과 화면의 비율
 		expand = 1;
 	static RECT rt;	//윈도우의 작업영역의 크기 저장
@@ -98,6 +113,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		GetClientRect(hWnd, &rt);
 		rx = (float)rt.right / paint[id].bx;
 		ry = (float)rt.bottom / paint[id].by;
+		break;
+	case WM_TIMER:
+		OnTimer(hWnd, &mx, &my, &xi, &yi, endX + m, endY + m, startX, startY);
 		break;
 	case WM_LBUTTONDOWN:		//돋보기의 시작 좌표를 알아냄
 		if (Draw == 0)
@@ -277,6 +295,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case 'v':
 		case 'V':
 			c = 'v';
+			break;
+		case 'A':
+		case 'a':
+			if (num % 2 == 0)
+				SetTimer(hWnd, 1, 25, NULL);
+			else
+				KillTimer(hWnd, 1);
+			num++;
 			break;
 		case 'Q':		//종료
 		case 'q':
