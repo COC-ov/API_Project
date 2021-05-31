@@ -10,6 +10,7 @@
 #define R 20
 int x, y;
 int xi, yi;
+HBITMAP hBit;
 void OnTimer(HWND);
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -53,9 +54,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 void OnTimer(HWND hWnd)
 {
 	RECT crt;
-	RECT rt;
+	HDC hDC, hMemDC;
+	HBITMAP oldBit;
+	HPEN hPen, oldPen;
+	HBRUSH hBrush, oldBrush;
+	int i;
 
 	GetClientRect(hWnd, &crt);
+	hDC = GetDC(hWnd);
+
+	if (hBit == NULL)
+		hBit = CreateCompatibleBitmap(hDC, crt.right, crt.bottom);
+	hMemDC = CreateCompatibleDC(hDC);
+	oldBit = (HBITMAP)SelectObject(hMemDC, hBit);
+
+	FillRect
 	if (x <= R || x >= crt.right - R)
 		xi *= -1;
 	if (y <= R || y >= crt.bottom - R)	//x,y는 원의 중심 원이 화면 밖으로 나가려고 할때 -1을 곱하여 방향을 바꿈
@@ -64,7 +77,6 @@ void OnTimer(HWND hWnd)
 	x += xi;
 	y += yi;
 
-	SetRect(&rt, x - R - 5, y - R - 5, x + R + 5, y + R + 5);	//x와 y의 최대 이동거리+5픽셀 부분만 다시그리도록 수정
 	InvalidateRect(hWnd, &rt, TRUE);
 }
 
@@ -72,10 +84,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	HDC hDC;
 	PAINTSTRUCT ps;
-	HPEN hPen, oldPen;
-	HBRUSH hBrush, oldBrush;
-	RECT crt;
-	int i;
 
 	switch (uMsg)
 	{
